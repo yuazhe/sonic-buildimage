@@ -876,6 +876,8 @@ class SFP(NvidiaSFPCommon):
             list: [False] * channels
         """
         api = self.get_xcvr_api()
+        if api and DeviceDataManager.is_independent_mode():
+            return api.get_tx_fault()
         return [False] * api.NUM_CHANNELS if api else None
 
     def get_temperature(self):
@@ -976,7 +978,6 @@ class SFP(NvidiaSFPCommon):
             self.refresh_xcvr_api()
             if self._xcvr_api is not None:
                 self._xcvr_api.get_rx_los = self.get_rx_los
-                self._xcvr_api.get_tx_fault = self.get_tx_fault
         return self._xcvr_api
 
     def is_sw_control(self):
