@@ -316,6 +316,38 @@ class NvidiaSFPCommon(SfpOptoeBase):
     sfp_index_to_logical_port_dict = {}
     sfp_index_to_logical_lock = threading.Lock()
     
+    SFP_MLNX_ERROR_DESCRIPTION_LONGRANGE_NON_MLNX_CABLE = 'Long range for non-Mellanox cable or module'
+    SFP_MLNX_ERROR_DESCRIPTION_ENFORCE_PART_NUMBER_LIST = 'Enforce part number list'
+    SFP_MLNX_ERROR_DESCRIPTION_PMD_TYPE_NOT_ENABLED = 'PMD type not enabled'
+    SFP_MLNX_ERROR_DESCRIPTION_PCIE_POWER_SLOT_EXCEEDED = 'PCIE system power slot exceeded'
+    SFP_MLNX_ERROR_DESCRIPTION_RESERVED = 'Reserved'
+
+    SDK_ERRORS_TO_DESCRIPTION = {
+        0x1: SFP_MLNX_ERROR_DESCRIPTION_LONGRANGE_NON_MLNX_CABLE,
+        0x4: SFP_MLNX_ERROR_DESCRIPTION_ENFORCE_PART_NUMBER_LIST,
+        0x8: SFP_MLNX_ERROR_DESCRIPTION_PMD_TYPE_NOT_ENABLED,
+        0xc: SFP_MLNX_ERROR_DESCRIPTION_PCIE_POWER_SLOT_EXCEEDED
+    }
+
+    SFP_MLNX_ERROR_BIT_LONGRANGE_NON_MLNX_CABLE = 0x00010000
+    SFP_MLNX_ERROR_BIT_ENFORCE_PART_NUMBER_LIST = 0x00020000
+    SFP_MLNX_ERROR_BIT_PMD_TYPE_NOT_ENABLED = 0x00040000
+    SFP_MLNX_ERROR_BIT_PCIE_POWER_SLOT_EXCEEDED = 0x00080000
+    SFP_MLNX_ERROR_BIT_RESERVED = 0x80000000
+
+    SDK_ERRORS_TO_ERROR_BITS = {
+        0x0: SfpOptoeBase.SFP_ERROR_BIT_POWER_BUDGET_EXCEEDED,
+        0x1: SFP_MLNX_ERROR_BIT_LONGRANGE_NON_MLNX_CABLE,
+        0x2: SfpOptoeBase.SFP_ERROR_BIT_I2C_STUCK,
+        0x3: SfpOptoeBase.SFP_ERROR_BIT_BAD_EEPROM,
+        0x4: SFP_MLNX_ERROR_BIT_ENFORCE_PART_NUMBER_LIST,
+        0x5: SfpOptoeBase.SFP_ERROR_BIT_UNSUPPORTED_CABLE,
+        0x6: SfpOptoeBase.SFP_ERROR_BIT_HIGH_TEMP,
+        0x7: SfpOptoeBase.SFP_ERROR_BIT_BAD_CABLE,
+        0x8: SFP_MLNX_ERROR_BIT_PMD_TYPE_NOT_ENABLED,
+        0xc: SFP_MLNX_ERROR_BIT_PCIE_POWER_SLOT_EXCEEDED
+    }
+
     def __init__(self, sfp_index):
         super(NvidiaSFPCommon, self).__init__()
         self.index = sfp_index + 1
@@ -344,42 +376,61 @@ class NvidiaSFPCommon(SfpOptoeBase):
         error_type = utils.read_int_from_file(status_error_file_path)
 
         return oper_state, error_type
+
+    def get_fd(self, fd_type):
+        return open(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{fd_type}')
+
+    def get_fd_for_polling_legacy(self):
+        """Get polling fds for when module host management is disabled
+
+        Returns:
+            object: file descriptor of present
+        """
+        return self.get_fd('present')
+
+    def get_module_status(self):
+        """Get value of sysfs status. It could return:
+            SXD_PMPE_MODULE_STATUS_PLUGGED_ENABLED_E = 0x1,
+            SXD_PMPE_MODULE_STATUS_UNPLUGGED_E = 0x2,
+            SXD_PMPE_MODULE_STATUS_MODULE_PLUGGED_ERROR_E = 0x3,
+            SXD_PMPE_MODULE_STATUS_PLUGGED_DISABLED_E = 0x4,
+            SXD_PMPE_MODULE_STATUS_UNKNOWN_E = 0x5,
+
+        Returns:
+            str: sonic status of the module
+        """
+        status = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/status')
+        return SDK_STATUS_TO_SONIC_STATUS[status]
+
+    def get_error_info_from_sdk_error_type(self):
+        """Translate SDK error type to SONiC error state and error description. Only calls
+        when sysfs "present" returns "2".
+
+        Returns:
+            tuple: (error state, error description)
+        """
+        error_type = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/statuserror', default=-1)
+        sfp_state_bits = NvidiaSFPCommon.SDK_ERRORS_TO_ERROR_BITS.get(error_type)
+        if sfp_state_bits is None:
+            logger.log_error(f"Unrecognized error {error_type} detected on SFP {self.sdk_index}")
+            return SFP_STATUS_ERROR, "Unknown error ({})".format(error_type)
+
+        if error_type in SDK_SFP_BLOCKING_ERRORS:
+            # In SFP at error status case, need to overwrite the sfp_state with the exact error code
+            sfp_state_bits |= SfpOptoeBase.SFP_ERROR_BIT_BLOCKING
+
+        # An error should be always set along with 'INSERTED'
+        sfp_state_bits |= SfpOptoeBase.SFP_STATUS_BIT_INSERTED
+
+        # For vendor specific errors, the description should be returned as well
+        error_description = NvidiaSFPCommon.SDK_ERRORS_TO_DESCRIPTION.get(error_type)
+        sfp_state = str(sfp_state_bits)
+        return sfp_state, error_description
     
 
 class SFP(NvidiaSFPCommon):
     """Platform-specific SFP class"""
     shared_sdk_handle = None
-    SFP_MLNX_ERROR_DESCRIPTION_LONGRANGE_NON_MLNX_CABLE = 'Long range for non-Mellanox cable or module'
-    SFP_MLNX_ERROR_DESCRIPTION_ENFORCE_PART_NUMBER_LIST = 'Enforce part number list'
-    SFP_MLNX_ERROR_DESCRIPTION_PMD_TYPE_NOT_ENABLED = 'PMD type not enabled'
-    SFP_MLNX_ERROR_DESCRIPTION_PCIE_POWER_SLOT_EXCEEDED = 'PCIE system power slot exceeded'
-    SFP_MLNX_ERROR_DESCRIPTION_RESERVED = 'Reserved'
-    
-    SDK_ERRORS_TO_DESCRIPTION = {
-        0x1: SFP_MLNX_ERROR_DESCRIPTION_LONGRANGE_NON_MLNX_CABLE,
-        0x4: SFP_MLNX_ERROR_DESCRIPTION_ENFORCE_PART_NUMBER_LIST,
-        0x8: SFP_MLNX_ERROR_DESCRIPTION_PMD_TYPE_NOT_ENABLED,
-        0xc: SFP_MLNX_ERROR_DESCRIPTION_PCIE_POWER_SLOT_EXCEEDED
-    }
-
-    SFP_MLNX_ERROR_BIT_LONGRANGE_NON_MLNX_CABLE = 0x00010000
-    SFP_MLNX_ERROR_BIT_ENFORCE_PART_NUMBER_LIST = 0x00020000
-    SFP_MLNX_ERROR_BIT_PMD_TYPE_NOT_ENABLED = 0x00040000
-    SFP_MLNX_ERROR_BIT_PCIE_POWER_SLOT_EXCEEDED = 0x00080000
-    SFP_MLNX_ERROR_BIT_RESERVED = 0x80000000
-    
-    SDK_ERRORS_TO_ERROR_BITS = {
-        0x0: SfpOptoeBase.SFP_ERROR_BIT_POWER_BUDGET_EXCEEDED,
-        0x1: SFP_MLNX_ERROR_BIT_LONGRANGE_NON_MLNX_CABLE,
-        0x2: SfpOptoeBase.SFP_ERROR_BIT_I2C_STUCK,
-        0x3: SfpOptoeBase.SFP_ERROR_BIT_BAD_EEPROM,
-        0x4: SFP_MLNX_ERROR_BIT_ENFORCE_PART_NUMBER_LIST,
-        0x5: SfpOptoeBase.SFP_ERROR_BIT_UNSUPPORTED_CABLE,
-        0x6: SfpOptoeBase.SFP_ERROR_BIT_HIGH_TEMP,
-        0x7: SfpOptoeBase.SFP_ERROR_BIT_BAD_CABLE,
-        0x8: SFP_MLNX_ERROR_BIT_PMD_TYPE_NOT_ENABLED,
-        0xc: SFP_MLNX_ERROR_BIT_PCIE_POWER_SLOT_EXCEEDED
-    }
     
     # Class level state machine object, only applicable for module host management
     sm = None
@@ -846,31 +897,6 @@ class SFP(NvidiaSFPCommon):
         else:
             error_description = "Unknow SFP module status ({})".format(oper_status)
         return error_description
-    
-    def get_error_info_from_sdk_error_type(self):
-        """Translate SDK error type to SONiC error state and error description. Only calls
-        when sysfs "present" returns "2".
-
-        Returns:
-            tuple: (error state, error description)
-        """
-        error_type = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/temperature/statuserror', default=-1)
-        sfp_state_bits = SFP.SDK_ERRORS_TO_ERROR_BITS.get(error_type)
-        if sfp_state_bits is None:
-            logger.log_error(f"Unrecognized error {error_type} detected on SFP {self.sdk_index}")
-            return SFP_STATUS_ERROR, "Unknown error ({})".format(error_type)
-
-        if error_type in SDK_SFP_BLOCKING_ERRORS:
-            # In SFP at error status case, need to overwrite the sfp_state with the exact error code
-            sfp_state_bits |= SFP.SFP_ERROR_BIT_BLOCKING
-
-        # An error should be always set along with 'INSERTED'
-        sfp_state_bits |= SFP.SFP_STATUS_BIT_INSERTED
-
-        # For vendor specific errors, the description should be returned as well
-        error_description = SFP.SDK_ERRORS_TO_DESCRIPTION.get(error_type)
-        sfp_state = str(sfp_state_bits)
-        return sfp_state, error_description
 
     def _get_eeprom_path(self):
         return SFP_EEPROM_ROOT_TEMPLATE.format(self.sdk_index)
@@ -1111,20 +1137,6 @@ class SFP(NvidiaSFPCommon):
             # just in case control file does not exist
             raise Exception(f'control sysfs for SFP {self.sdk_index} does not exist')
     
-    def get_module_status(self):
-        """Get value of sysfs status. It could return:
-            SXD_PMPE_MODULE_STATUS_PLUGGED_ENABLED_E = 0x1,
-            SXD_PMPE_MODULE_STATUS_UNPLUGGED_E = 0x2,
-            SXD_PMPE_MODULE_STATUS_MODULE_PLUGGED_ERROR_E = 0x3,
-            SXD_PMPE_MODULE_STATUS_PLUGGED_DISABLED_E = 0x4,
-            SXD_PMPE_MODULE_STATUS_UNKNOWN_E = 0x5,
-
-        Returns:
-            str: sonic status of the module
-        """
-        status = utils.read_int_from_file(f'/sys/module/sx_core/asic0/module{self.sdk_index}/status')
-        return SDK_STATUS_TO_SONIC_STATUS[status]
-
     def get_hw_present(self):
         """Get hardware present status, only applicable on host management mode
 
@@ -1518,10 +1530,7 @@ class SFP(NvidiaSFPCommon):
             bool: True if the module is in a stable state
         """
         return self.state in (STATE_NOT_PRESENT, STATE_SW_CONTROL, STATE_FW_CONTROL, STATE_POWER_BAD, STATE_POWER_LIMIT_ERROR)
-    
-    def get_fd(self, fd_type):
-        return open(f'/sys/module/sx_core/asic0/module{self.sdk_index}/{fd_type}')
-    
+        
     def get_fds_for_poling(self):            
         if self.state == STATE_FW_CONTROL:
             return {
@@ -1532,14 +1541,6 @@ class SFP(NvidiaSFPCommon):
                 'hw_present': self.get_fd('hw_present'),
                 'power_good': self.get_fd('power_good')
             } 
-            
-    def get_fd_for_polling_legacy(self):
-        """Get polling fds for when module host management is disabled
-
-        Returns:
-            object: file descriptor of present
-        """
-        return self.get_fd('present')
     
     def fill_change_event(self, port_dict):
         """Fill change event data based on current state.
@@ -1895,3 +1896,17 @@ class RJ45Port(NvidiaSFPCommon):
         :return:
         """
         return
+
+    def get_module_status(self):
+        """Get value of sysfs status. It could return:
+            SXD_PMPE_MODULE_STATUS_PLUGGED_ENABLED_E = 0x1,
+            SXD_PMPE_MODULE_STATUS_UNPLUGGED_E = 0x2,
+            SXD_PMPE_MODULE_STATUS_MODULE_PLUGGED_ERROR_E = 0x3,
+            SXD_PMPE_MODULE_STATUS_PLUGGED_DISABLED_E = 0x4,
+            SXD_PMPE_MODULE_STATUS_UNKNOWN_E = 0x5,
+
+        Returns:
+            str: sonic status of the module
+        """
+        status = super().get_module_status()
+        return SFP_STATUS_REMOVED if status == SFP_STATUS_UNKNOWN else status
