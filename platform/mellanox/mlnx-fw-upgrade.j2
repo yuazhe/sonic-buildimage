@@ -184,7 +184,8 @@ function UnlockStateChange() {
 }
 
 function WaitForDevice() {
-    local -i QUERY_RETRY_COUNT_MAX="10"
+    local -i QUERY_RETRY_COUNT_MAX="60"
+    local -i QUERY_RETRY_WARNING="10"
     local -i QUERY_RETRY_COUNT="0"
     local SPC_MST_DEV
     local QUERY_RC=""
@@ -196,7 +197,11 @@ function WaitForDevice() {
         [[ ("${QUERY_RETRY_COUNT}" -lt "${QUERY_RETRY_COUNT_MAX}") && ("${QUERY_RC}" != "${EXIT_SUCCESS}") ]] || break
         sleep 1s
         ((QUERY_RETRY_COUNT++))
-        LogInfo "Retrying MST device query ${QUERY_RETRY_COUNT}"
+        if [[ ("${QUERY_RETRY_COUNT}" -lt "${QUERY_RETRY_WARNING}") ]]; then
+            LogInfo "Retrying MST device query ${QUERY_RETRY_COUNT}"
+        else
+            LogError "Retrying MST device query ${QUERY_RETRY_COUNT}"
+        fi
     done
 
     if [[ "${QUERY_RC}" != "${EXIT_SUCCESS}" ]]; then
