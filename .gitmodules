@@ -1,7 +1,7 @@
 [submodule "sonic-swss-common"]
 	path = src/sonic-swss-common
 	url = https://github.com/sonic-net/sonic-swss-common
-	branch = 202411
+	branch = 202412
 [submodule "sonic-linux-kernel"]
 	path = src/sonic-linux-kernel
 	url = https://github.com/Azure/sonic-linux-kernel.msft
