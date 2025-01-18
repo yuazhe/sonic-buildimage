@@ -16,7 +16,7 @@ constants:
     use_deployment_id: false
     use_neighbors_meta: false
     graceful_restart:
-      enabled: true
+      enabled: false
       restart_time: 240
     multipath_relax:
       enabled: true
