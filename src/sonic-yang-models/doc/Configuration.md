@@ -94,6 +94,7 @@ Table of Contents
          * [SYSTEM_DEFAULTS table](#systemdefaults-table)
          * [RADIUS](#radius)
          * [Static DNS](#static-dns)
+         * [SRv6](#srv6)
    * [For Developers](#for-developers)
       * [Generating Application Config by Jinja2 Template](#generating-application-config-by-jinja2-template)
       * [Incremental Configuration by Subscribing to ConfigDB](#incremental-configuration-by-subscribing-to-configdb)
@@ -2870,6 +2871,30 @@ The DNS_NAMESERVER table introduces static DNS nameservers configuration.
 		"1.1.1.1": {},
 		"fe80:1000:2000:3000::1": {}
 	},
+}
+```
+
+### SRv6
+
+The **SRV6_MY_SIDS** and **SRV6_MY_LOCATORS** tables introduce Segment Routing over IPv6 configuration.
+An example is as follows:
+```
+{
+    "SRV6_MY_LOCATORS" : {
+        "loc1" : {
+            "prefix" : "FCBB:BBBB:20::"
+        }
+    }
+    "SRV6_MY_SIDS" : {
+        "loc1|FCBB:BBBB:20::" : {
+           "action": "uN"
+        },
+        "loc1|FCBB:BBBB:20:F1::" : {
+           "action": "uDT46",
+           "decap_vrf": "default",
+           "decap_dscp_mode": "pipe"
+        }
+    }
 }
 ```
 
