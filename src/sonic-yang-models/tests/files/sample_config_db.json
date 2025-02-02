@@ -2811,6 +2811,17 @@
                 "action": "uN",
                 "decap_dscp_mode": "pipe"
             }
+        },
+        "SRV6_MY_LOCATORS": {
+            "loc1": {
+                "prefix": "fcbb:bbbb:1::"
+            }
+        },
+        "SRV6_MY_SIDS": {
+            "loc1|fcbb:bbbb:1::/48": {
+                "action": "uN",
+                "decap_dscp_mode": "pipe"
+            }
         }
     },
     "SAMPLE_CONFIG_DB_UNKNOWN": {
