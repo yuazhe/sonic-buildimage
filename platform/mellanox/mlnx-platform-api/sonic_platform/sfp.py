@@ -439,11 +439,34 @@ class SFP(NvidiaSFPCommon):
             bool: True if device is present, False if not
         """
         presence_sysfs = f'/sys/module/sx_core/asic0/module{self.sdk_index}/hw_present' if self.is_sw_control() else f'/sys/module/sx_core/asic0/module{self.sdk_index}/present'
-        if utils.read_int_from_file(presence_sysfs) != 1:
+        try:
+            if utils.read_int_from_file(presence_sysfs, raise_exception=True) != 1:
+                return False
+        except:
+            SFP.print_call_info()
             return False
         eeprom_raw = self._read_eeprom(0, 1, log_on_error=False)
         return eeprom_raw is not None
     
+    @staticmethod
+    def print_call_info():
+        # print call stack
+        import traceback
+        logger.log_notice(f"call stack: {traceback.format_stack()}")
+        import psutil
+        pid = os.getpid()
+        cmds = []
+        while pid != 1 and pid != 0:
+            try:
+                process = psutil.Process(pid)
+                cmds.append(process.cmdline())
+                #cmds.append(' '.join([arg.strip() for arg in process.cmdline()]))
+                pid = process.ppid()
+            except psutil.NoSuchProcess as e:
+                logger.log_error(f'failed to get process information for pid {pid} - {e}')
+                break
+        logger.log_notice(f"process stack: {cmds}")
+
     @classmethod
     def wait_sfp_eeprom_ready(cls, sfp_list, wait_time):
         not_ready_list = sfp_list
