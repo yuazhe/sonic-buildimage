@@ -8,6 +8,7 @@
 !
 ! TSA configuration
 !
+debug route-map
 {% set lo0_ipv4 = get_ipv4_loopback_address(LOOPBACK_INTERFACE, "Loopback0") | ip %}
 {% set lo4096_ipv4 = get_ipv4_loopback_address(LOOPBACK_INTERFACE, "Loopback4096") | ip %}
 {% if lo0_ipv4 is not none %}

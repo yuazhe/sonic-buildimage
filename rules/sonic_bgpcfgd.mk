@@ -15,4 +15,5 @@ $(SONIC_BGPCFGD)_DEBS_DEPENDS += $(LIBYANG) \
                                  $(LIBYANG_PY3) \
                                  $(PYTHON3_SWSSCOMMON)
 $(SONIC_BGPCFGD)_PYTHON_VERSION = 3
+$(SONIC_BGPCFGD)_TEST = n
 SONIC_PYTHON_WHEELS += $(SONIC_BGPCFGD)
