@@ -6,6 +6,7 @@
 !
 {% endblock banner %}
 debug route-map
+debug zebra fpm
 !
 {% block fpm %}
 {% if ( ('localhost' in DEVICE_METADATA) and ('nexthop_group' in  DEVICE_METADATA['localhost']) and
