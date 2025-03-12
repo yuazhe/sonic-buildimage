@@ -6,7 +6,6 @@ ifeq ($(ENABLE_PY2_MODULES), y)
     $(SONIC_CONFIG_ENGINE_PY2)_DEPENDS += $(SONIC_PY_COMMON_PY2)
     $(SONIC_CONFIG_ENGINE_PY2)_DEBS_DEPENDS += $(PYTHON_SWSSCOMMON)
     $(SONIC_CONFIG_ENGINE_PY2)_PYTHON_VERSION = 2
-    $(SONIC_CONFIG_ENGINE_PY2)_TEST = n
     SONIC_PYTHON_WHEELS += $(SONIC_CONFIG_ENGINE_PY2)
 endif
 
@@ -17,7 +16,6 @@ $(SONIC_CONFIG_ENGINE_PY3)_SRC_PATH = $(SRC_PATH)/sonic-config-engine
 $(SONIC_CONFIG_ENGINE_PY3)_DEPENDS += $(SONIC_PY_COMMON_PY3) \
                                       $(SONIC_YANG_MGMT_PY3) \
                                       $(SONIC_YANG_MODELS_PY3)
-$(SONIC_CONFIG_ENGINE_PY3)_TEST = n
 $(SONIC_CONFIG_ENGINE_PY3)_DEBS_DEPENDS += $(LIBYANG) \
                                            $(LIBYANG_CPP) \
                                            $(LIBYANG_PY3) \
