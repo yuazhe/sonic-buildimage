@@ -1,13 +1,13 @@
 # Mellanox SAI
 
-MLNX_SAI_VERSION = SAIBuild2505.33.0.0
+MLNX_SAI_VERSION = SAIBuild0.0.0.5
 MLNX_SAI_ASSETS_GITHUB_URL = https://github.com/Mellanox/Spectrum-SDK-Drivers-SONiC-Bins
 MLNX_SAI_ASSETS_RELEASE_TAG = sai-$(MLNX_SAI_VERSION)-$(BLDENV)-$(CONFIGURED_ARCH)
 MLNX_SAI_ASSETS_URL = $(MLNX_SAI_ASSETS_GITHUB_URL)/releases/download/$(MLNX_SAI_ASSETS_RELEASE_TAG)
 MLNX_SAI_DEB_VERSION = $(subst -,.,$(subst _,.,$(MLNX_SAI_VERSION)))
 
 # Place here URL where SAI sources exist
-MLNX_SAI_SOURCE_BASE_URL = 
+MLNX_SAI_SOURCE_BASE_URL = http://nbu-nfs.mellanox.com/auto/sw_system_release/sonic/internal/tshalvi
 
 ifneq ($(MLNX_SAI_SOURCE_BASE_URL), )
 SAI_FROM_SRC = y
