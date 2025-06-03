@@ -49,11 +49,10 @@ logger = logger.Logger('thermal-updater')
 
 
 class ThermalUpdater:
-    def __init__(self, sfp_list, update_asic=True):
+    def __init__(self, sfp_list):
         self._sfp_list = sfp_list
         self._sfp_status = {}
         self._timer = utils.Timer()
-        self._update_asic = update_asic
 
     def load_tc_config(self):
         asic_poll_interval = 1
@@ -76,9 +75,8 @@ class ThermalUpdater:
                     if sfp_poll_interval_config:
                         sfp_poll_interval = int(sfp_poll_interval_config) / 2
 
-        if self._update_asic:
-            logger.log_notice(f'ASIC polling interval: {asic_poll_interval}')
-            self._timer.schedule(asic_poll_interval, self.update_asic)
+        logger.log_notice(f'ASIC polling interval: {asic_poll_interval}')
+        self._timer.schedule(asic_poll_interval, self.update_asic)
         logger.log_notice(f'Module polling interval: {sfp_poll_interval}')
         self._timer.schedule(sfp_poll_interval, self.update_module)
 
