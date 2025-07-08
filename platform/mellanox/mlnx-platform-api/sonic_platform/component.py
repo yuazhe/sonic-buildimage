@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2024 NVIDIA CORPORATION & AFFILIATES.
+# Copyright (c) 2019-2025 NVIDIA CORPORATION & AFFILIATES.
 # Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,6 +29,7 @@ try:
     import glob
     import tempfile
     import subprocess
+    import traceback
     from sonic_py_common import device_info
     from sonic_py_common.general import check_output_pipe
     if sys.version_info[0] > 2:
@@ -908,6 +909,70 @@ class ComponentCPLDSN2201(ComponentCPLD):
             return False
 
         return True
+
+
+class ComponentBMCObj(Component):
+
+    def __init__(self, name, attrs):
+        super(Component, self).__init__()
+
+        from .bmc import BMC
+
+        self.bmc = BMC.get_instance()
+        self.name = name
+        self.type_name = ''
+        self.fw_id = attrs.get('id', '')
+        self.eeprom_id = attrs.get('eeprom_id', None)
+
+    def get_firmware_id(self):
+        return self.fw_id
+
+    def get_eeprom_id(self):
+        return self.eeprom_id
+
+    def install_firmware(self, image_path, allow_reboot=True, force_update=False, progress_callback=None):
+        if not self._check_file_validity(image_path):
+            return (False, ('Invalid firmware image path', False))
+        print('Starting {} firmware update, path={}'.format(self.get_firmware_id(), image_path))
+
+        ret = 0
+        error_msg = ''
+        updated = False
+
+        try:
+            ret, (error_msg, updated) = self.bmc.update_firmware(image_path,
+                                                                 [],
+                                                                 force_update,
+                                                                 progress_callback)
+        except Exception as e:
+            error_trace = traceback.format_exc()
+            print(str(e))
+            print(error_trace)
+            raise
+
+        if (ret == 0):
+            # TODO(BMC): Check if power cycle is required for apply the installation
+            return (True, (error_msg, updated))
+        else:
+            print(f'Fail to upgrade {self.get_firmware_id()} firmware ({error_msg})')
+            return (False, (error_msg, updated))
+
+    def get_firmware_version(self):
+        return self.bmc.get_version()
+    
+    # TODO(BMC): Add get_firmware_update_notification if power cycle is needed
+
+class ComponentBMC(ComponentBMCObj):
+    COMPONENT_NAME = 'BMC'
+    COMPONENT_DESCRIPTION = 'BMC - Baseboard Management Controller'
+    COMPONENT_FIRMWARE_EXTENSION = ['.fwpkg']
+
+    def __init__(self, name, attrs):
+        super(ComponentBMC, self).__init__(name, attrs)
+
+        self.type_name = self.COMPONENT_NAME
+        self.description = self.COMPONENT_DESCRIPTION
+        self.image_ext_name = self.COMPONENT_FIRMWARE_EXTENSION
 
 class ComponentCPLDSN4280(ComponentCPLD):
     CPLD_FIRMWARE_UPDATE_COMMAND = ['cpldupdate', '--gpio', '--print-progress', '']
