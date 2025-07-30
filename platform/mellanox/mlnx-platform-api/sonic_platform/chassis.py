@@ -1085,6 +1085,20 @@ class Chassis(ChassisBase):
         """
         return False
 
+    
+    ##############################################
+    # LiquidCooling methods
+    ##############################################
+
+    def initialize_liquid_cooling(self):
+        if not self._liquid_cooling:
+            from .liquid_cooling import LiquidCooling
+            self._liquid_cooling = LiquidCooling()
+
+    def get_liquid_cooling(self):
+        self.initialize_liquid_cooling()
+        return self._liquid_cooling
+
 
 class ModularChassis(Chassis):
     def __init__(self):
