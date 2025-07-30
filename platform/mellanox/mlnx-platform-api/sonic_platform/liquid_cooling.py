@@ -27,6 +27,7 @@ try:
     from sonic_platform_base.liquid_cooling_base import LeakageSensorBase,LiquidCoolingBase
     from sonic_py_common.logger import Logger
     from . import utils
+    import os
 except ImportError as e:
     raise ImportError(str(e) + "- required module not found")
 
@@ -58,6 +59,7 @@ class LiquidCooling(LiquidCoolingBase):
         
         # Count and initialize leakage sensors
         self.leakage_sensors_num = 0
+        self.leakage_sensors = []
         for i in range(1, LEAKAGE_SENSORS_MAX_NUMBER):  # Set a reasonable upper limit
             sensor_path = os.path.join(LIQUID_COOLING_SENSOR_PATH, f"leakage{i}")
             if os.path.exists(sensor_path):

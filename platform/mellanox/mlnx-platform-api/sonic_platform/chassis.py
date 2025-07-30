@@ -120,6 +120,8 @@ class Chassis(ChassisBase):
         self._RJ45_port_inited = False
         self._RJ45_port_list = None
 
+        self.liquid_cooling = None
+
         Chassis.chassis_instance = self
 
         self.module_host_mgmt_initializer = module_host_mgmt_initializer.ModuleHostMgmtInitializer()
@@ -1091,13 +1093,12 @@ class Chassis(ChassisBase):
     ##############################################
 
     def initialize_liquid_cooling(self):
-        if not self._liquid_cooling:
-            from .liquid_cooling import LiquidCooling
-            self._liquid_cooling = LiquidCooling()
+        if not self.liquid_cooling:
+            self.liquid_cooling = LiquidCooling()
 
     def get_liquid_cooling(self):
         self.initialize_liquid_cooling()
-        return self._liquid_cooling
+        return self.liquid_cooling
 
 
 class ModularChassis(Chassis):
