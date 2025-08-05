@@ -36,9 +36,9 @@ create_disk()
 
 prepare_installer_disk()
 {
-    fallocate -l 4096M $INSTALLER_DISK
+    fallocate -l 5120M $INSTALLER_DISK
 
-    mkfs.vfat -n INSTALLER $INSTALLER_DISK
+    mkfs.ext2 -n INSTALLER $INSTALLER_DISK
 
     tmpdir=$(mktemp -d)
 
