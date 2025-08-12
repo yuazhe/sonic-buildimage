@@ -139,6 +139,13 @@ THERMAL_NAMING_RULE = {
             "search_pattern": '/run/hw-management/thermal/sodimm*_temp_input',
             'index_pattern': r'sodimm(\d+)_temp_input',
             "type": "discrete",
+        },
+        {
+            "name": "PMIC {} Temp",
+            "temperature": "voltmon{}_temp1_input",
+            "high_threshold": "voltmon{}_temp1_max",
+            "high_critical_threshold": "voltmon{}_temp1_crit",
+            "type": "indexable",
         }
     ],
     'linecard thermals': {
@@ -165,6 +172,8 @@ def initialize_chassis_thermals():
                 count = DeviceDataManager.get_gearbox_count('/run/hw-management/config')
             elif 'CPU Core' in rule['name']:
                 count = DeviceDataManager.get_cpu_thermal_count()
+            elif 'PMIC' in rule['name']:
+                count = DeviceDataManager.get_pmic_count()
             if count == 0:
                 logger.log_debug('Failed to get thermal object count for {}'.format(rule['name']))
                 continue

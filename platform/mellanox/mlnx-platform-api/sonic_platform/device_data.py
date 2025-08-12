@@ -301,6 +301,11 @@ class DeviceDataManager:
 
     @classmethod
     @utils.read_only_cache()
+    def get_pmic_count(cls):
+        return len(glob.glob('/run/hw-management/thermal/voltmon*_temp1_input'))
+
+    @classmethod
+    @utils.read_only_cache()
     def get_sodimm_thermal_count(cls):
         return len(glob.glob('/run/hw-management/thermal/sodimm*_temp_input'))
 
