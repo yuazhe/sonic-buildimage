@@ -3,6 +3,8 @@ from swsscommon.swsscommon import SonicV2Connector
 
 from .health_checker import HealthChecker
 
+EVENTS_PUBLISHER_SOURCE = "sonic-events-host"
+EVENTS_PUBLISHER_TAG = "liquid-cooling-leak"
 
 class HardwareChecker(HealthChecker):
     """
@@ -12,6 +14,7 @@ class HardwareChecker(HealthChecker):
     ASIC_TEMPERATURE_KEY = 'TEMPERATURE_INFO|ASIC'
     FAN_TABLE_NAME = 'FAN_INFO'
     PSU_TABLE_NAME = 'PSU_INFO'
+    LIQUID_COOLING_TABLE_NAME = 'LIQUID_COOLING_INFO'
 
     def __init__(self):
         HealthChecker.__init__(self)
@@ -26,6 +29,7 @@ class HardwareChecker(HealthChecker):
         self._check_asic_status(config)
         self._check_fan_status(config)
         self._check_psu_status(config)
+        self._check_liquid_cooling_status(config)
 
     def _check_asic_status(self, config):
         """
@@ -283,3 +287,49 @@ class HardwareChecker(HealthChecker):
         elif '{}.{}'.format(object_name, check_point) in ignore_set:
             return True
         return False
+
+    def publish_events(self, leak_sensors):
+        params = swsscommon.FieldValueMap()
+        for sensor in leak_sensors:
+            params["leak_sensor"] = sensor
+            swsscommon.event_publish(self.events_handle, EVENTS_PUBLISHER_TAG, params)
+
+    def _check_liquid_cooling_status(self, config):
+        """
+        Check liquid cooling status including:
+            1. Check all leakage sensors are in good state
+        :param config: Health checker configuration
+        :return:
+        """
+        if config.ignore_devices and 'liquid_cooling' in config.ignore_devices:
+            return
+
+        keys = self._db.keys(self._db.STATE_DB, HardwareChecker.LIQUID_COOLING_TABLE_NAME + '*')
+        if not keys:
+            self.set_object_not_ok('Liquid Cooling', 'Liquid Cooling', 'Failed to get liquid cooling information')
+            return
+
+        for key in natsorted(keys):
+            key_list = key.split('|')
+            if len(key_list) != 2:  # error data in DB, log it and ignore
+                self.set_object_not_ok('Liquid Cooling', key, 'Invalid key for LIQUID_COOLING_INFO: {}'.format(key))
+                continue
+
+            name = key_list[1]
+            if config.ignore_devices and name in config.ignore_devices:
+                continue
+
+            data_dict = self._db.get_all(self._db.STATE_DB, key)
+            leakage_sensor = data_dict.get('leakage_sensor', None)
+            if leakage_sensor is None:
+                self.set_object_not_ok('Liquid Cooling', name, 'Failed to get leakage sensor data for {}'.format(name))
+                continue
+
+            if leakage_sensor.lower() == 'true':
+                self.set_object_not_ok('Liquid Cooling', name, 'Leakage sensor {} is leaking'.format(name))
+                continue    
+
+            self.set_object_ok('Liquid Cooling', name)
+            
+
+        self.publish_events(leakage_sensors)
