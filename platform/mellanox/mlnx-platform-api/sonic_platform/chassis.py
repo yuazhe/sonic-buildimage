@@ -165,6 +165,9 @@ class Chassis(ChassisBase):
         if not self._psu_list:
             from .psu import Psu, FixedPsu
             psu_count = DeviceDataManager.get_psu_count()
+            if psu_count == 0:
+                # For system with no PSU, for example, SN5810.
+                return
             hot_swapable = DeviceDataManager.is_psu_hotswapable()
 
             # Initialize PSU list
@@ -220,9 +223,11 @@ class Chassis(ChassisBase):
         if not self._fan_drawer_list:
             from .fan import Fan
             from .fan_drawer import RealDrawer, VirtualDrawer
-
-            hot_swapable = DeviceDataManager.is_fan_hotswapable()
             drawer_num = DeviceDataManager.get_fan_drawer_count()
+            if drawer_num == 0:
+                # For system with no fan, for example, SN5810.
+                return
+            hot_swapable = DeviceDataManager.is_fan_hotswapable()
             fan_num = DeviceDataManager.get_fan_count()
             fan_num_per_drawer = fan_num // drawer_num
             drawer_ctor = RealDrawer if hot_swapable else VirtualDrawer
