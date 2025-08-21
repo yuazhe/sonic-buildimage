@@ -27,6 +27,27 @@
         "fans": [],
         "fan_drawers": [],
         "psus": [],
+        "leak_sensors": [
+            {
+                "name": "leakage1"
+            },
+            {
+                "name": "leakage2"
+            },
+            {
+                "name": "leakage3"
+            },
+            {
+                "name": "leakage4"
+            },
+            {
+                "name": "leakage5"
+            },
+            {
+                "name": "leakage6"
+            }
+
+        ],
         "thermals": [
             {
                 "name": "ASIC"
