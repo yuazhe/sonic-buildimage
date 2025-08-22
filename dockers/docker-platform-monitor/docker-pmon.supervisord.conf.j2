@@ -199,7 +199,9 @@ dependent_startup_wait_for=rsyslogd:running {% if delay_non_critical_daemon %}de
 
 {% if not skip_thermalctld %}
 [program:thermalctld]
-command={% if API_VERSION == 3 and 'thermalctld' not in python2_daemons %}python3 {% else %} python2 {% endif %}/usr/local/bin/thermalctld
+command={% if API_VERSION == 3 and 'thermalctld' not in python2_daemons %}python3 {% else %} python2 {% endif %}/usr/local/bin/thermalctld \
+{% if enable_liquid_cooling %}--enable_liquid_cooling {% endif %} \
+{% if liquid_cooling_update_interval is not none %}--liquid_cooling_update_interval {{ liquid_cooling_update_interval }}{% endif %}
 priority=10
 autostart=false
 autorestart=unexpected
