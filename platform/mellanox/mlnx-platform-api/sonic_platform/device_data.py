@@ -249,6 +249,11 @@ class DeviceDataManager:
 
     @classmethod
     @utils.read_only_cache()
+    def get_leakage_sensor_count(cls):
+        return len(glob.glob('/var/run/hw-management/system/leakage*'))
+
+    @classmethod
+    @utils.read_only_cache()
     def get_psu_count(cls):
         psu_count = utils.read_int_from_file('/run/hw-management/config/hotplug_psus')
         # If psu_count == 0, the platform has fixed PSU
