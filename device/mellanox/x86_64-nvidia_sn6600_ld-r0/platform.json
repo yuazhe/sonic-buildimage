@@ -39,9 +39,6 @@
             },
             {
                 "name": "leakage4"
-            },
-            {
-                "name": "leakage5"
             }
         ],        
         "thermals": [
