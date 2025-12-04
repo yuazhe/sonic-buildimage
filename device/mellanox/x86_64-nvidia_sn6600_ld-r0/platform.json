@@ -1,6 +1,6 @@
 {
     "chassis": {
-        "name": "SN6600",
+        "name": "SN6600_LD",
         "components": [
             {
                 "name": "ONIE"
@@ -22,6 +22,9 @@
             },
             {
                 "name": "CPLD4"
+            },
+            {
+                "name": "BMC"
             }
         ],
         "fans": [],
@@ -46,28 +49,82 @@
                 "name": "ASIC"
             },
             {
-                "name": "Ambient COMEX Temp"
-            },
-            {
-                "name": "Ambient Fan Side Temp"
-            },
-            {
-                "name": "Ambient Port Side Temp"
-            },
-            {
                 "name": "CPU Core 0 Temp"
             },
             {
-                "name": "CPU Core 1 Temp"
-            },
-            {
-                "name": "CPU Core 2 Temp"
-            },
-            {
-                "name": "CPU Core 3 Temp"
-            },
-            {
                 "name": "CPU Pack Temp"
+            },
+            {
+                "name": "SODIMM 1 Temp"
+            },
+            {
+                "name": "SODIMM 2 Temp"
+            },
+            {
+                "name": "PMIC 1 Temp"
+            },
+            {
+                "name": "PMIC 2 Temp"
+            },
+            {
+                "name": "PMIC 3 Temp"
+            },
+            {
+                "name": "PMIC 4 Temp"
+            },
+            {
+                "name": "PMIC 5 Temp"
+            },
+            {
+                "name": "PMIC 6 Temp"
+            },
+            {
+                "name": "PMIC 7 Temp"
+            },
+            {
+                "name": "PMIC 8 Temp"
+            },
+            {
+                "name": "PMIC 9 Temp"
+            },
+            {
+                "name": "PMIC 10 Temp"
+            },
+            {
+                "name": "PMIC 11 Temp"
+            },
+            {
+                "name": "PMIC 12 Temp"
+            },
+            {
+                "name": "PMIC 13 Temp"
+            },
+            {
+                "name": "PMIC 14 Temp"
+            },
+            {
+                "name": "PMIC 15 Temp"
+            },
+            {
+                "name": "PMIC 16 Temp"
+            },
+            {
+                "name": "PMIC 17 Temp"
+            },
+            {
+                "name": "PMIC 18 Temp"
+            },
+            {
+                "name": "PMIC 19 Temp"
+            },
+            {
+                "name": "PMIC 20 Temp"
+            },
+            {
+                "name": "PMIC 21 Temp"
+            },
+            {
+                "name": "PMIC 22 Temp"
             }
         ],
         "sfps": [
