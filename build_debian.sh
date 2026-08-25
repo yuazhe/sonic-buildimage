@@ -736,9 +736,25 @@ if [[ $SECURE_UPGRADE_MODE == 'dev' || $SECURE_UPGRADE_MODE == "prod" ]]; then
 	sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt -y --allow-downgrades install $basename_deb_packages
 	sudo rm $FILESYSTEM_ROOT/grub-efi*.deb
 
-    # debian secure boot dependencies
-    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT apt-get -y install      \
-        shim-unsigned
+    # Pin shim-unsigned to 15.8-1 whose embedded sbatlevel requires grub,4 (not grub,5).
+    # shim 16.1-2~deb13u1 bumped sbatlevel to grub,5 which revokes our grub,4 binary,
+    # preventing any secure-boot image from booting. Remove
+    # this pin once our grub is compatible with new debian 13 shim
+    SHIM_UNSIGNED_VERSION=15.8-1
+    SHIM_UNSIGNED_SNAPSHOT=20240506T145317Z
+    # sha256 of the pinned deb differs per architecture; select by CONFIGURED_ARCH.
+    case $CONFIGURED_ARCH in
+        amd64) SHIM_UNSIGNED_SHA256=d3d87eddfe78b0089f6e95c8c278ea7a5d8b1152df243414e9cc82e13fb7f118 ;;
+        arm64) SHIM_UNSIGNED_SHA256=58bb31ac9ecacf3b2a0e067f3a1bb981396e675594a5acb3cb28cc4c5687e3ae ;;
+        *) echo "ERROR: no pinned shim-unsigned ${SHIM_UNSIGNED_VERSION} sha256 for CONFIGURED_ARCH=${CONFIGURED_ARCH}"; exit 1 ;;
+    esac
+    SHIM_UNSIGNED_DEB=shim-unsigned_${SHIM_UNSIGNED_VERSION}_${CONFIGURED_ARCH}.deb
+    SHIM_UNSIGNED_URL="https://snapshot.debian.org/archive/debian/${SHIM_UNSIGNED_SNAPSHOT}/pool/main/s/shim/${SHIM_UNSIGNED_DEB}"
+
+    sudo wget --tries=10 --retry-on-http-error=429,503 --waitretry=30 --timeout=300 -q -O $FILESYSTEM_ROOT/${SHIM_UNSIGNED_DEB} ${SHIM_UNSIGNED_URL}
+    echo "${SHIM_UNSIGNED_SHA256}  $FILESYSTEM_ROOT/${SHIM_UNSIGNED_DEB}" | sha256sum -c -
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT dpkg -i /${SHIM_UNSIGNED_DEB}
+    sudo rm $FILESYSTEM_ROOT/${SHIM_UNSIGNED_DEB}
 
     if [ ! -f $SECURE_UPGRADE_SIGNING_CERT ]; then
         echo "Error: SONiC SECURE_UPGRADE_SIGNING_CERT=$SECURE_UPGRADE_SIGNING_CERT key missing"
