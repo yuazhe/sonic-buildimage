@@ -12,6 +12,12 @@ class OnieInterface:
     KEY_DOWN = '\x1b[B'
     #KEY_RIGHT = '\x1b[C'
     #KEY_LEFT = '\x1b[D'
+    # Carriage return. GRUB's serial console expects CR ('\r') as Enter;
+    # pexpect.sendline() appends LF ('\n'), which is not reliably treated as
+    # Enter by GRUB under UEFI/OVMF, so we send CR explicitly for menu actions.
+    ENTER = '\r'
+    # Seconds to wait between menu keystrokes so GRUB registers each one.
+    KEY_DELAY = 0.5
 
     ONIE_INSTALL_OS = 'ONIE: Install OS'
     ONIE_CONSOLE = 'Please press Enter to activate this console'
@@ -34,16 +40,36 @@ class OnieInterface:
     def wait_grub(self):
         self.onie.expect([self.GRUB_SELECTION])
 
+    def select_entry(self, down_count=0):
+        # Deterministically pick a GRUB menu entry: move the highlight down
+        # `down_count` times, then boot it with an explicit carriage return.
+        #
+        # We must not rely on GRUB's auto-boot countdown here: the first
+        # keystroke cancels the countdown, after which GRUB waits for an
+        # explicit Enter. We also send CR ('\r') rather than using
+        # pexpect.sendline() (which appends LF) because the GRUB serial
+        # console under UEFI/OVMF does not treat LF as Enter -- that left the
+        # VM stuck at the recovery menu with "Embed ONIE" highlighted and
+        # timed out waiting for the "Install OS" menu that never appeared.
+        for _ in range(down_count):
+            self.onie.send(self.KEY_DOWN)
+            time.sleep(self.KEY_DELAY)
+        time.sleep(self.KEY_DELAY)
+        self.onie.send(self.ENTER)
+
     def embed_onie(self):
         self.wait_grub()
-        self.onie.sendline(self.KEY_DOWN)
+        # "ONIE: Embed ONIE" is the entry directly below the default
+        # "ONIE: Rescue" in the recovery menu.
+        self.select_entry(down_count=1)
 
     def install_os(self):
         self.onie.expect([self.ONIE_INSTALL_OS])
         self.wait_grub()
         if self.args.f: # manual installation
-            # enable rescue mode
-            self.onie.sendline(self.KEY_DOWN)
+            # enable rescue mode: "ONIE: Rescue" is directly below the default
+            # "ONIE: Install OS" entry.
+            self.select_entry(down_count=1)
             self.onie.expect([self.ONIE_CONSOLE])
             self.onie.sendline()
             self.onie.expect([self.ONIE_RESCUE])
@@ -54,7 +80,8 @@ class OnieInterface:
             self.onie.expect([self.ONIE_PROMPT])
             self.onie.sendline('y')
         else: # automatic discovery installation
-            self.onie.sendline()
+            # boot the default highlighted "ONIE: Install OS" entry
+            self.select_entry(down_count=0)
 
 
 def main():
