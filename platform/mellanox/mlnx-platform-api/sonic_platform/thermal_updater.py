@@ -295,11 +295,11 @@ class ThermalUpdater:
         if not DeviceDataManager.is_spc1():
             return
 
-        logger.log_notice('Waiting for hw-mgmt sysfs labels to be ready')
-        if not utils.ensure_sysfs_labels_ready():
-            logger.log_error('Failed to wait for hw-mgmt sysfs labels to be ready')
+        logger.log_notice('Waiting for hw-mgmt sysfs labels and ASICs init to be ready')
+        if not utils.ensure_hw_mgmt_thermal_sysfs_ready():
+            logger.log_error('Failed to wait for hw-mgmt sysfs labels and ASICs init to be ready')
             return
-        logger.log_notice('hw-mgmt sysfs labels are ready')
+        logger.log_notice('hw-mgmt sysfs labels and ASICs init are ready')
 
         for f in glob.iglob('/run/hw-management/thermal/asic*'):
             if os.path.islink(f):

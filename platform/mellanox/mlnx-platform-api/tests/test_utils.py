@@ -464,6 +464,50 @@ class TestUtils:
         finally:
             thread.join()
 
+    def test_is_asics_init_done(self, tmp_path):
+        asics_file = tmp_path / 'asics_init_done'
+        assert not utils.is_asics_init_done(str(asics_file))
+
+        asics_file.write_text('0\n')
+        assert not utils.is_asics_init_done(str(asics_file))
+
+        asics_file.write_text('1\n')
+        assert utils.is_asics_init_done(str(asics_file))
+
+    @mock.patch('sonic_platform.utils.wait_until_conditions', return_value=True)
+    def test_ensure_hw_mgmt_thermal_sysfs_ready_success(self, mock_wait):
+        assert utils.ensure_hw_mgmt_thermal_sysfs_ready()
+        mock_wait.assert_called_once()
+
+    @mock.patch('sonic_platform.utils.logger.log_error')
+    @mock.patch('sonic_platform.utils.wait_until_conditions', return_value=False)
+    def test_ensure_hw_mgmt_thermal_sysfs_ready_timeout(self, mock_wait, mock_log_error):
+        assert not utils.ensure_hw_mgmt_thermal_sysfs_ready()
+        mock_wait.assert_called_once()
+        mock_log_error.assert_called_once()
+
+    def test_ensure_hw_mgmt_thermal_sysfs_ready_asics_flips_to_one(self, tmp_path, monkeypatch):
+        """Wait until labels exist and asics_init_done changes from 0 to 1."""
+        labels_file = tmp_path / 'sysfs_labels_rdy'
+        asics_file = tmp_path / 'asics_init_done'
+        asics_file.write_text('0\n')
+
+        monkeypatch.setattr(utils, 'SYSFS_LABELS_READY_FILE', str(labels_file))
+        monkeypatch.setattr(utils, 'ASICS_INIT_DONE_FILE', str(asics_file))
+
+        def create_ready_indicators():
+            time.sleep(0.3)
+            labels_file.write_text('1')
+            time.sleep(0.3)
+            asics_file.write_text('1\n')
+
+        thread = threading.Thread(target=create_ready_indicators)
+        thread.start()
+        try:
+            assert utils.ensure_hw_mgmt_thermal_sysfs_ready(timeout=5)
+        finally:
+            thread.join()
+
     def test_timer(self):
         timer = utils.Timer()
         timer.start()

@@ -268,12 +268,12 @@ class TestThermalUpdater:
 
     @mock.patch('sonic_platform.thermal_updater.logger')
     @mock.patch('sonic_platform.thermal_updater.DeviceDataManager.is_spc1', return_value=True)
-    @mock.patch('sonic_platform.thermal_updater.utils.ensure_sysfs_labels_ready', return_value=True)
+    @mock.patch('sonic_platform.thermal_updater.utils.ensure_hw_mgmt_thermal_sysfs_ready', return_value=True)
     @mock.patch('sonic_platform.thermal_updater.os.unlink')
     @mock.patch('sonic_platform.thermal_updater.glob.iglob')
     @mock.patch('sonic_platform.thermal_updater.os.path.islink', return_value=True)
-    def test_unlink_hw_mgmt_thermal_files_waits_for_sysfs_labels(
-            self, mock_islink, mock_iglob, mock_unlink, mock_ensure_sysfs,
+    def test_unlink_hw_mgmt_thermal_files_waits_for_sysfs_ready(
+            self, mock_islink, mock_iglob, mock_unlink, mock_ensure_ready,
             mock_is_spc1, mock_logger):
         mock_iglob.side_effect = [
             ['/run/hw-management/thermal/asic'],
@@ -283,22 +283,22 @@ class TestThermalUpdater:
         updater = ThermalUpdater(None)
         updater.unlink_hw_mgmt_thermal_files()
 
-        mock_ensure_sysfs.assert_called_once()
-        mock_logger.log_notice.assert_any_call('hw-mgmt sysfs labels are ready')
+        mock_ensure_ready.assert_called_once()
+        mock_logger.log_notice.assert_any_call('hw-mgmt sysfs labels and ASICs init are ready')
         assert mock_unlink.call_count == 2
 
     @mock.patch('sonic_platform.thermal_updater.logger')
     @mock.patch('sonic_platform.thermal_updater.DeviceDataManager.is_spc1', return_value=True)
-    @mock.patch('sonic_platform.thermal_updater.utils.ensure_sysfs_labels_ready', return_value=False)
+    @mock.patch('sonic_platform.thermal_updater.utils.ensure_hw_mgmt_thermal_sysfs_ready', return_value=False)
     @mock.patch('sonic_platform.thermal_updater.os.unlink')
     @mock.patch('sonic_platform.thermal_updater.glob.iglob')
-    def test_unlink_hw_mgmt_thermal_files_sysfs_labels_timeout(
-            self, mock_iglob, mock_unlink, mock_ensure_sysfs, mock_is_spc1, mock_logger):
+    def test_unlink_hw_mgmt_thermal_files_sysfs_ready_timeout(
+            self, mock_iglob, mock_unlink, mock_ensure_ready, mock_is_spc1, mock_logger):
         updater = ThermalUpdater(None)
         updater.unlink_hw_mgmt_thermal_files()
 
-        mock_ensure_sysfs.assert_called_once()
+        mock_ensure_ready.assert_called_once()
         mock_logger.log_error.assert_called_once_with(
-            'Failed to wait for hw-mgmt sysfs labels to be ready')
+            'Failed to wait for hw-mgmt sysfs labels and ASICs init to be ready')
         mock_iglob.assert_not_called()
         mock_unlink.assert_not_called()

@@ -355,6 +355,10 @@ def wait_for_file_creation(file_path, timeout):
 
 SYSFS_LABELS_READY_FILE = '/var/run/hw-management/sysfs_labels_rdy'
 SYSFS_LABELS_READY_WAIT_TIMEOUT = 60
+ASICS_INIT_DONE_FILE = '/var/run/hw-management/config/asics_init_done'
+# Match the original thermal-file wait. On SPC1, asics_init_done flips to 1
+# after mlxsw_minimal chipup, which is later than sysfs_labels_rdy.
+HW_MGMT_THERMAL_SYSFS_WAIT_TIMEOUT = 300
 
 
 def ensure_sysfs_labels_ready(file_path=SYSFS_LABELS_READY_FILE,
@@ -388,6 +392,41 @@ def ensure_sysfs_labels_ready(file_path=SYSFS_LABELS_READY_FILE,
         return True
 
     logger.log_error("Sysfs labels ready file {} not available after timeout".format(file_path))
+    return False
+
+
+def is_asics_init_done(file_path=None):
+    """Return True when hw-mgmt has written asics_init_done=1 after ASIC chipup."""
+    if file_path is None:
+        file_path = ASICS_INIT_DONE_FILE
+    return read_int_from_file(file_path, default=0, log_func=None) == 1
+
+
+def ensure_hw_mgmt_thermal_sysfs_ready(timeout=HW_MGMT_THERMAL_SYSFS_WAIT_TIMEOUT):
+    """Wait until hw-mgmt sysfs labels are ready and ASICs init is done.
+
+    sysfs_labels_rdy is created after udev-driven label/sysfs setup. On SPC1
+    (mlxsw_minimal) that does not include ASIC/module thermal files; those
+    appear after chipup, when asics_init_done is set to 1. The ready file is
+    created once; asics_init_done exists early as 0 and is later updated to 1.
+
+    Returns:
+        True if both indicators are ready, False on timeout.
+    """
+    conditions = [
+        lambda: os.path.exists(SYSFS_LABELS_READY_FILE),
+        lambda: is_asics_init_done(),
+    ]
+    if wait_until_conditions(conditions, timeout, interval=1):
+        return True
+
+    logger.log_error(
+        "hw-mgmt thermal sysfs not ready after timeout "
+        "(sysfs_labels_rdy exists={}, asics_init_done={})".format(
+            os.path.exists(SYSFS_LABELS_READY_FILE),
+            read_int_from_file(ASICS_INIT_DONE_FILE, default=0, log_func=None)
+        )
+    )
     return False
 
 
