@@ -261,11 +261,14 @@ class TestDeviceInfo(object):
         """is_chassis() is called once per port by some CLI commands. A non-chassis
            answer is cached too, so CONFIG_DB is not read again on every call."""
         mock_cfg_db.return_value.get_table.return_value = {"localhost": {"type": "LeafRouter"}}
-        for _ in range(100):
+        assert device_info.is_chassis() is False
+        reads_by_first_call = mock_cfg_db.call_count
+        assert reads_by_first_call > 0
+
+        for _ in range(99):
             assert device_info.is_chassis() is False
-        # Only the first call reads CONFIG_DB: "type", then "switch_type" for the voq and
-        # the packet chassis check
-        assert mock_cfg_db.call_count == 3
+        # Only the first call reads CONFIG_DB
+        assert mock_cfg_db.call_count == reads_by_first_call
 
     @mock.patch("sonic_py_common.device_info.ConfigDBConnector", autospec=True)
     @mock.patch("sonic_py_common.device_info.is_disaggregated_chassis", return_value=False)
@@ -275,17 +278,28 @@ class TestDeviceInfo(object):
                                                mock_disaggregated, mock_cfg_db):
         """A failed lookup must be retried, not cached, so a transient CONFIG_DB error
            does not pin a wrong answer for the lifetime of the process."""
+        reachable = False
         good = mock.MagicMock()
         good.get_table.return_value = {"localhost": {"type": "LeafRouter", "switch_type": "chassis-packet"}}
-        mock_cfg_db.side_effect = [Exception("CONFIG_DB not reachable")] * 3 + [good] * 3
+
+        def connector():
+            if not reachable:
+                raise Exception("CONFIG_DB not reachable")
+            return good
+
+        mock_cfg_db.side_effect = connector
 
         assert device_info.is_chassis() is False
         assert device_info.chassis_info is None
 
+        reachable = True
         assert device_info.is_chassis() is True
         assert device_info.chassis_info is True
+
+        # Now cached: CONFIG_DB is not read again
+        reads_by_second_call = mock_cfg_db.call_count
         assert device_info.is_chassis() is True
-        assert mock_cfg_db.call_count == 6
+        assert mock_cfg_db.call_count == reads_by_second_call
 
     @mock.patch("sonic_py_common.device_info.ConfigDBConnector", autospec=True)
     def test_get_localhost_info_is_not_cached(self, mock_cfg_db):
